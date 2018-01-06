@@ -65,15 +65,15 @@ class GraphConvolution(object):
 		x = self.layer_below.output(seq_output=seq_output)
 		# return self.activation(T.dot(X, self.W) + self.b)		
 
- 		dropout = Dropout()
-		if self.sparse_inputs:
-			x = dropout.sparse_dropout(x, self.drop_value, self.num_features_nonzero) # Not written completely
-		else:
-			x = dropout.dropout_layer(x, self.drop_value)#, train)
+ 	# 	dropout = Dropout()
+		# if self.sparse_inputs:
+		# 	x = dropout.sparse_dropout(x, self.drop_value, self.num_features_nonzero) # Not written completely
+		# else:
+		# 	x = dropout.dropout_layer(x, self.drop_value)#, train)
 
 		# convolve
 		# theano.shared(value=np.zeros(shape,dtype=theano.config.floatX))
-		output = zero0s((self.inputD,self.size))
+		# output = zero0s((self.inputD,self.size))
 		supports = list()
 		# for i in range(len(self.adjacency)):
 
@@ -84,9 +84,9 @@ class GraphConvolution(object):
 				pre_sup = T.dot(x, self.W)
 		else:
 			pre_sup = self.W[i]
-		support = T.dot(self.adjacency, pre_sup)
+		support = T.dot(self.adjacency, pre_sup) #5.5 5.10x10.5
 		supports.append(support)
-		output += support
+		output = support
 
 		if self.bias:
 			output += self.b
