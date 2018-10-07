@@ -4,7 +4,7 @@ from theano import tensor as T
 import time
 
 from utils import *
-from models import GCN
+from model import GCN
 
 # Set random seed
 seed = 123

@@ -46,4 +46,4 @@ input_dim = (np.shape(features))[1]
 model = GCN(input_dim,16,M,learning_rate,weight_decay,drop_value=drop_value)
 
 
-model.fitModel(features,y_train,adjacency,train_mask)
+model.fitModel(features,y_train,adjacency,train_mask, val_mask, test_mask)
