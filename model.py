@@ -8,9 +8,19 @@ from GraphConvolution import GraphConvolution
 import theano.tensor.nnet as nnet
 from TemporalInputFeatures import TemporalInputFeatures
 from updates import *
+from six.moves import cPickle
 import graphviz
 
 class GCN(object):
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state['training_set']
+        return state
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+        self.training_set = cPickle.load(open(self.training_set_file, 'rb'))
 
     def __init__(self,input_dim,hidden1,output_dim,learning_rate,weight_decay,drop_value=None,sparse_inputs=False,update_type=RMSprop(),clipnorm=0.0):
         
@@ -19,8 +29,8 @@ class GCN(object):
         self.adjacency = T.matrix('adjacency_matrix', dtype='float64')
         self.train_mask = T.vector('train_mask', dtype='float64')
         
-        self.X.tag.test_value = np.random.rand(5, 1433)
-        self.Y.tag.test_value = np.random.rand(5, 7)
+        self.X.tag.test_value = np.random.rand(5, input_dim)
+        self.Y.tag.test_value = np.random.rand(5, output_dim)
         self.adjacency.tag.test_value = np.random.rand(5, 5)
 
         self.update_type = update_type
@@ -28,6 +38,8 @@ class GCN(object):
         self.layers.append(TemporalInputFeatures(input_dim,self.X))
         self.layers.append(GraphConvolution(hidden1,self.adjacency,drop_value=drop_value))
         self.layers.append(GraphConvolution(output_dim,self.adjacency,activation_str='linear',drop_value=drop_value))
+        # print(input_dim)
+        # exit()
 
 
         L2_sqr = self.layers[0].L2_sqr
@@ -81,24 +93,16 @@ class GCN(object):
         loss *= mask
         return T.mean(loss)
 
+    def modelPass(self,X,Y,adjacency,train_mask, val_mask, test_mask,rng=np.random.RandomState(1234567890)):
 
+        loss,Y_pr = self.train(X,Y,adjacency, train_mask)
+        g = self.grad_norm(X,Y,adjacency, train_mask)
+        trainAcc = self.accuracy(Y_pr,Y,train_mask)
+        return loss, g, trainAcc
 
-
-    def fitModel(self,X,Y,adjacency,train_mask, val_mask, test_mask,epochs=10000,rng=np.random.RandomState(1234567890)):
-
-        epoch_count = 0
-        iterations = 0
-        grad_norms = []
-        loss_after_each_iter = []
-
-        for i in range(epochs):
-            loss,Y_pr = self.train(X,Y,adjacency, train_mask)
-            g = self.grad_norm(X,Y,adjacency, train_mask)
-            grad_norms.append(g)
-
-            loss_after_each_iter.append(loss)
-            trainAcc = self.accuracy(Y_pr,Y,train_mask)
-
-            termout = 'loss={0} iter={1} grad_norm={2} Train Acc = {3} '.format(loss,i,g,trainAcc)
-            print(termout)
-
+    def test(self, X, Y, adjacency, train_mask):
+        _,Y_pr = self.train(X,Y,adjacency, train_mask)
+        testAcc = self.accuracy(Y_pr,Y,train_mask)
+        print("===============================================")
+        print("Test Acc. " + str(testAcc))
+        print("===============================================")

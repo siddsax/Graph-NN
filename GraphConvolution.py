@@ -41,9 +41,6 @@ class GraphConvolution(object):
 	def connect(self,layer_below):
 		self.layer_below = layer_below
 		self.inputD = layer_below.size
-		# self.W = list()
-		# for i in range(len(self.adjacency)):
-		# 	self.W.append(self.init((self.inputD,self.size),rng=self.rng))
 		self.W = self.init((self.inputD,self.size),rng=self.rng)
 		
 		if self.bias:
@@ -56,8 +53,6 @@ class GraphConvolution(object):
 			for param, weight in zip(self.params,self.weights):
 				param.set_value(np.asarray(weight, dtype=theano.config.floatX))
 
-		# for i in range(len(self.W)):
-		# 	self.L2_sqr = (self.W[i] ** 2).sum()
 		self.L2_sqr = (self.W ** 2).sum()
 
 
@@ -81,6 +76,9 @@ class GraphConvolution(object):
 			if self.sparse_inputs:
 				pre_sup = sp.dot(x, self.W)
 			else:
+				# print(x.shape)
+				# print(self.W.shape)
+				# exit()
 				pre_sup = T.dot(x, self.W)
 		else:
 			pre_sup = self.W[i]
