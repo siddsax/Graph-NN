@@ -29,18 +29,19 @@ class GCN(object):
         self.adjacency = T.matrix('adjacency_matrix', dtype='float64')
         self.train_mask = T.vector('train_mask', dtype='float64')
         
+        # Test values for inputs for error-checking
         self.X.tag.test_value = np.random.rand(5, input_dim)
         self.Y.tag.test_value = np.random.rand(5, output_dim)
         self.adjacency.tag.test_value = np.random.rand(5, 5)
 
         self.update_type = update_type
         self.layers = []
+        # Input layer in Theano
         self.layers.append(TemporalInputFeatures(input_dim,self.X))
+        # Graph Convolution Layer 1
         self.layers.append(GraphConvolution(hidden1,self.adjacency,drop_value=drop_value))
+        # Graph Convolution Layer 2
         self.layers.append(GraphConvolution(output_dim,self.adjacency,activation_str='linear',drop_value=drop_value))
-        # print(input_dim)
-        # exit()
-
 
         L2_sqr = self.layers[0].L2_sqr
         for i in range(1,len(self.layers)):
@@ -53,14 +54,15 @@ class GCN(object):
                 self.params.extend(l.params)
 
         self.outputs = self.layers[-1].output()
-
         self.update_type.lr = learning_rate
 
+        # Output of the model from the last layer
         self.Y_pr = nnet.softmax(self.outputs)
-        # self.cost = T.mean(nnet.categorical_crossentropy(self.Y_pr,self.Y) + weight_decay * L2_sqr)
+        # Marked Softmax CE Loss
         self.cost = self.masked_softmax_cross_entropy(self.Y_pr, self.Y, self.train_mask) + T.mean(weight_decay * L2_sqr)
+        # Updates taken from the optimizer
         [self.updates,self.grads] = self.update_type.get_updates(self.params,self.cost)
-        
+        # Training Function
         self.train = theano.function([self.X,self.Y,self.adjacency, self.train_mask],[self.cost,self.Y_pr],updates=self.updates,on_unused_input='ignore')
         self.norm = T.sqrt(sum([T.sum(g**2) for g in self.grads]))
         self.grad_norm = theano.function([self.X,self.Y,self.adjacency, self.train_mask],self.norm,on_unused_input='ignore')
@@ -68,7 +70,6 @@ class GCN(object):
     def masked_accuracy(self, Y_pred, Y, mask):
         """Accuracy with masking."""
         accuracy_all = np.equal(np.argmax(Y_pred,axis=1),np.argmax(Y,axis=1)).astype(float)
-        # accuracy_all = tf.cast(correct_prediction, tf.float32)
         mask = mask.astype(float)
         mask /= np.mean(mask)
         accuracy_all *= mask
@@ -76,14 +77,6 @@ class GCN(object):
         
     def accuracy(self,Y_pred,Y,mask):
         return self.masked_accuracy(Y_pred, Y, mask)
-        # mask = mask.astype(float)
-        # mask /= np.mean(mask)
-        # print(Y[np.random.randint(0, Y.shape[0])])
-        # print(Y_pred[np.random.randint(0, Y.shape[0])])
-        # print(np.argmax(Y_pred,axis=1))
-        # print(mask)
-        # return np.mean(np.multiply(mask,np.equal(np.argmax(Y_pred,axis=1),np.argmax(Y,axis=1))))
-        # return np.mean(np.equal(np.argmax(Y_pred,axis=1),np.argmax(Y,axis=1)))
 
     def masked_softmax_cross_entropy(self, preds, labels, mask):
         """Softmax cross-entropy loss with masking."""
